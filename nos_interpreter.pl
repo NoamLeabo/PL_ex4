@@ -43,9 +43,13 @@ update(X, V, [(Y, W)|Rest], [(Y, W)|NewRest]) :-
 % Arithmetic expression evaluation
 eval_aexp(num(N), _, N).
 eval_aexp(var(X), State, V) :- lookup(State, X, V).
+
 eval_aexp(add(E1, E2), State, V) :- eval_aexp(E1, State, V1), eval_aexp(E2, State, V2), V is V1+V2.
+
 eval_aexp(mult(E1, E2), State, V) :- eval_aexp(E1, State, V1), eval_aexp(E2, State, V2), V is V1*V2.
+
 eval_aexp(sub(E1, E2), State, V) :- eval_aexp(E1, State, V1), eval_aexp(E2, State, V2), V is V1-V2.
+
 eval_aexp(iand(E1, E2), State, V) :- eval_aexp(E1, State, V1), eval_aexp(E2, State, V2), V is V1 /\ V2.
 % please complete eval_aexp
 
@@ -53,36 +57,40 @@ eval_aexp(iand(E1, E2), State, V) :- eval_aexp(E1, State, V1), eval_aexp(E2, Sta
 % Boolean expression evaluation
 eval_bexp(true, _, true).
 eval_bexp(false, _, false).
-eval_bexp(aeq(E1,E2), State, V) :- eval_aexp(E1, State, V1), eval_aexp(E2, State, V2), V == (V1 =:= V2).
-eval_bexp(beq(E1,E2), State, V) :- eval_bexp(E1, State, V1), eval_bexp(E2, State, V2), V == (V1 =:= V2).
-eval_bexp(gte(E1,E2), State, V) :- eval_aexp(E1, State, V1), eval_aexp(E2, State, V2), V == (V1 >= V2).
-eval_bexp(neg(E), State, V) :- eval_bexp(E, State, true), V == false; eval_bexp(E, State, false), V == true.
-eval_bexp(and(E1, E2), State, V) :- eval_bexp(E1, State, V1), eval_bexp(E2, State, V2), V == (V1, V2).
+
+eval_bexp(aeq(E1,E2), State, true) :- eval_aexp(E1, State, V1), eval_aexp(E2, State, V2), (V1 =:= V2).
+eval_bexp(aeq(E1,E2), State, false) :- eval_aexp(E1, State, V1), eval_aexp(E2, State, V2), (V1 =\= V2).
+
+eval_bexp(beq(E1,E2), State, true) :- eval_bexp(E1, State, V1), eval_bexp(E2, State, V2), (V1 == V2).
+eval_bexp(beq(E1,E2), State, false) :- eval_bexp(E1, State, V1), eval_bexp(E2, State, V2), (V1 \== V2).
+
+eval_bexp(gte(E1,E2), State, true) :- eval_aexp(E1, State, V1), eval_aexp(E2, State, V2), (V1 >= V2).
+eval_bexp(gte(E1,E2), State, false) :- eval_aexp(E1, State, V1), eval_aexp(E2, State, V2), (V1 < V2).
+
+eval_bexp(neg(E), State, true) :- eval_bexp(E, State, false).
+eval_bexp(neg(E), State, false) :- eval_bexp(E, State, true).
+
+eval_bexp(and(E1, E2), State, true) :- eval_bexp(E1, State, true), eval_bexp(E2, State, true).
+eval_bexp(and(E1, E2), State, false) :- eval_bexp(E1, State, false); eval_bexp(E2, State, false).
+
 % please complete eval_bexp
 
 
 % Natural semantics for statements
 nos(skip, State, State).
 
-nos(assign(X, E), State, NewState) :-
-    eval_aexp(E, State, V),
-    update(X, V, State, NewState).
+nos(assign(X, E), State, NewState) :-eval_aexp(E, State, V), update(X, V, State, NewState).
 
-nos(comp(S1, S2), State, NewState) :- 
-    nos(S1, State, State_prime), 
-    nos(S2, State_prime, NewState).
+nos(comp(S1, S2), State, NewState) :- nos(S1, State, State_prime), nos(S2, State_prime, NewState).
 
-nos(if(B, S1, S2), State, NewState) :-
-    eval_bexp(B, State, true), nos(S1, State, NewState);
-    eval_bexp(B, State, false), nos(S2, State, NewState). 
+nos(if(B, S1, _), State, NewState) :- eval_bexp(B, State, true), nos(S1, State, NewState).
+nos(if(B, _, S2), State, NewState) :- eval_bexp(B, State, false), nos(S2, State, NewState).
 
-nos(while(B, S), State, NewState) :-
-    eval_bexp(B, State, true), nos(S, State, State_prime), nos(while(B, S), State_prime, NewState);
-    eval_bexp(B, State, false), NewState == State.
+nos(while(B, S), State, NewState) :- eval_bexp(B, State, true), nos(S, State, State_prime), nos(while(B, S), State_prime, NewState).
+nos(while(B, _), State, State) :- eval_bexp(B, State, false).
 
-nos(do_while(S, B), State, NewState) :-
-    nos(S, State, State_prime), eval_bexp(B, State_prime, true), nos(do_while(S, B), State_prime, NewState);
-    nos(S, State, State_prime), eval_bexp(B, State_prime, false), NewState == State_prime.
+nos(do_while(S, B), State, NewState) :- nos(S, State, State_prime), eval_bexp(B, State_prime, true), nos(do_while(S, B), State_prime, NewState).
+nos(do_while(S, B), State, NewState) :- nos(S, State, State_prime), eval_bexp(B, State_prime, false), NewState = State_prime.
 % please complete nos
 
 
@@ -151,3 +159,13 @@ test6 :-
     nos(Program, [], State),
     lookup(State, count, Value),
     write('Number of 1 bits in 7 = '), write(Value), nl.
+
+test7 :-
+    Program = comp(assign(n, num(1)),  % Assign n = 1 (true)
+              comp(assign(t, num(1)), % Assign t = 1 (true)
+                   if(and(aeq(var(n), num(1)), aeq(var(t), num(1))), % Logical AND
+                      assign(count, num(1)),  % If true, count = 1
+                      assign(count, num(0))))), % Otherwise, count = 0
+    nos(Program, [], State),
+    lookup(State, count, Value),
+    write('Result of logical AND = '), write(Value), nl.
