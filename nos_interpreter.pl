@@ -46,18 +46,18 @@ eval_aexp(var(X), State, V) :- lookup(State, X, V).
 eval_aexp(add(E1, E2), State, V) :- eval_aexp(E1, State, V1), eval_aexp(E2, State, V2), V is V1+V2.
 eval_aexp(mult(E1, E2), State, V) :- eval_aexp(E1, State, V1), eval_aexp(E2, State, V2), V is V1*V2.
 eval_aexp(sub(E1, E2), State, V) :- eval_aexp(E1, State, V1), eval_aexp(E2, State, V2), V is V1-V2.
-eval_aexp(iand(E1, E2), State, V) :- eval_aexp(E1, State, V1), eval_aexp(E2, State, V2), V is V1 /\ V2
+eval_aexp(iand(E1, E2), State, V) :- eval_aexp(E1, State, V1), eval_aexp(E2, State, V2), V is V1 /\ V2.
 % please complete eval_aexp
 
 
 % Boolean expression evaluation
 eval_bexp(true, _, true).
 eval_bexp(false, _, false).
-eval_bexp(aeq(E1,E2), State, V) :- eval_aexp(E1, State, V1), eval_aexp(E2, State, V2), V = (V1 =:= V2).
-eval_bexp(beq(E1,E2), State, V) :- eval_bexp(E1, State, V1), eval_bexp(E2, State, V2), V = (V1 =:= V2).
-eval_bexp(gte(E1,E2), State, V) :- eval_aexp(E1, State, V1), eval_aexp(E2, State, V2), V = (V1 >= V2).
-eval_bexp(neg(E1), State, V) :- eval_bexp(E1, State, V1), V = \+V1.
-eval_bexp(and(E1, E2), State, V) :- eval_bexp(E1, State, V1), eval_bexp(E2, State, V2), V = (V1, V2).
+eval_bexp(aeq(E1,E2), State, V) :- eval_aexp(E1, State, V1), eval_aexp(E2, State, V2), V == (V1 =:= V2).
+eval_bexp(beq(E1,E2), State, V) :- eval_bexp(E1, State, V1), eval_bexp(E2, State, V2), V == (V1 =:= V2).
+eval_bexp(gte(E1,E2), State, V) :- eval_aexp(E1, State, V1), eval_aexp(E2, State, V2), V == (V1 >= V2).
+eval_bexp(neg(E), State, V) :- eval_bexp(E, State, true), V == false; eval_bexp(E, State, false), V == true.
+eval_bexp(and(E1, E2), State, V) :- eval_bexp(E1, State, V1), eval_bexp(E2, State, V2), V == (V1, V2).
 % please complete eval_bexp
 
 
@@ -78,11 +78,11 @@ nos(if(B, S1, S2), State, NewState) :-
 
 nos(while(B, S), State, NewState) :-
     eval_bexp(B, State, true), nos(S, State, State_prime), nos(while(B, S), State_prime, NewState);
-    eval_bexp(B, State, false), NewState = State.
+    eval_bexp(B, State, false), NewState == State.
 
 nos(do_while(S, B), State, NewState) :-
     nos(S, State, State_prime), eval_bexp(B, State_prime, true), nos(do_while(S, B), State_prime, NewState);
-    nos(S, State, State_prime), eval_bexp(B, State_prime, false), NewState = State_prime.
+    nos(S, State, State_prime), eval_bexp(B, State_prime, false), NewState == State_prime.
 % please complete nos
 
 
